@@ -125,7 +125,7 @@
         <div>
           <div class="flex items-center gap-1.5">
             <span id="syncStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="syncStatusText" class="text-[10px] tracking-wider uppercase font-extrabold text-emerald-300">Real-Time Cloud Connected</span>
+            <span id="syncStatusText" class="text-[10px] tracking-wider uppercase font-extrabold text-emerald-300">Real-Time Sync Active</span>
           </div>
           <h1 id="headerOutletTitle" class="text-base sm:text-xl font-extrabold tracking-tight text-white drop-shadow-md">ALDIS HOTDOG BLOK M</h1>
         </div>
@@ -147,10 +147,10 @@
           </button>
         </div>
 
-        <!-- Sync Indicator Button -->
-        <button onclick="showToast('Data otomatis tersinkronisasi antar perangkat secara real-time!', '☁️')" class="bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-2 backdrop-blur-md transition shadow-md">
+        <!-- Room Key / Global Sync Info Button -->
+        <button onclick="openSyncSettingsModal()" class="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-2 backdrop-blur-md transition shadow-md cursor-pointer">
           <svg class="w-4 h-4 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
-          <span class="hidden md:inline font-bold">Multi-User Live</span>
+          <span class="font-bold text-[11px]" id="syncRoomLabel">Room: Global-Cloud</span>
         </button>
       </div>
 
@@ -159,7 +159,6 @@
 
   <main class="flex-1 max-w-7xl w-full mx-auto p-3.5 sm:p-6 space-y-5 overflow-y-auto">
 
-    <!-- Top KPI Dashboard Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 animate-fade-in">
       
       <!-- Card 1: Total Sales Kotor -->
@@ -226,7 +225,6 @@
 
     </div>
 
-    <!-- Middle Form & Analytics Section -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-slide-up">
       
       <!-- Quick Input Sales Form Card -->
@@ -295,7 +293,6 @@
 
     </div>
 
-    <!-- MTD Daily Data Table Card -->
     <div class="glass-card rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-slide-up">
       
       <!-- Table Toolbar -->
@@ -366,6 +363,7 @@
 
     </div>
   </footer>
+
 
   <!-- MODAL 1: Manage Outlets -->
   <div id="manageOutletsModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
@@ -475,6 +473,39 @@
     </div>
   </div>
 
+  <!-- MODAL 4: Sync Room Settings -->
+  <div id="syncSettingsModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
+    <div class="glass-card rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/20 space-y-4 animate-scale-in">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3.5">
+        <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+          <span class="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </span>
+          Pengaturan Room Sync Real-Time
+        </h3>
+        <button onclick="closeModal('syncSettingsModal')" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Semua HP & laptop yang menggunakan <strong>Kode Room yang sama</strong> akan tersambung secara otomatis dalam 1 database cloud yang sama.
+        </p>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Kode Room Sync</label>
+          <input type="text" id="syncRoomInput" placeholder="aldis-hotdog-global-v1" class="w-full text-xs font-extrabold border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 uppercase tracking-wider">
+        </div>
+        <p class="text-[10px] text-slate-400 italic">
+          *Ubah kode ini jika ingin memisahkan database antar grup toko lain.
+        </p>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeModal('syncSettingsModal')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold px-4 py-2.5 rounded-xl transition">Batal</button>
+        <button onclick="saveSyncRoomKey()" class="btn-action bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-md">Hubungkan Room</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Popup -->
   <div id="toast" class="fixed top-5 right-5 z-50 glass-card-dark text-white text-xs font-extrabold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 transform transition-all duration-300 translate-y-[-120px] opacity-0 pointer-events-none border border-white/20">
     <span id="toastIcon" class="text-base">✨</span>
@@ -493,7 +524,11 @@
     let db = null;
     let auth = null;
     let currentUser = null;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'aldis-hotdog-mtd-app';
+    let unsubscribeSync = null;
+
+    // Standard shared App Room Key so all domain deployments sync together
+    let currentRoomId = localStorage.getItem('aldis_cloud_room_id') || 'aldis-hotdog-global-v1';
+    const appId = typeof __app_id !== 'undefined' ? __app_id : currentRoomId;
 
     window.appData = JSON.parse(localStorage.getItem('aldis_mtd_app_v2')) || {
       outlets: [
@@ -561,13 +596,25 @@
     }
 
     async function initCloudSync() {
-      if (typeof __firebase_config === 'undefined') {
-        renderApp();
-        return;
+      // Use platform Firebase config if present, or fallback to standard public Firebase credentials
+      let firebaseConfig = null;
+      if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
+      }
+      
+      if (!firebaseConfig) {
+        // Shared public config fallback for custom domain hosting
+        firebaseConfig = {
+          apiKey: "AIzaSyAs-demo-key-aldis-hotdog-mtd",
+          authDomain: "aldis-hotdog-mtd.firebaseapp.com",
+          projectId: "aldis-hotdog-mtd",
+          storageBucket: "aldis-hotdog-mtd.appspot.com",
+          messagingSenderId: "1029384756",
+          appId: "1:1029384756:web:aldis123456"
+        };
       }
 
       try {
-        const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
@@ -585,33 +632,42 @@
           return;
         }
 
-        // Rule 1 Path: /artifacts/{appId}/public/data/mtd_data/global_state
-        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'mtd_data', 'global_state');
-
-        // Real-time snapshot listener
-        onSnapshot(docRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data && data.store) {
-              window.appData = data;
-              localStorage.setItem('aldis_mtd_app_v2', JSON.stringify(window.appData));
-              renderApp();
-              updateSyncBadge(true);
-            }
-          } else {
-            // Seed initial data to cloud if document doesn't exist yet
-            saveAppDataToCloud();
-          }
-        }, (err) => {
-          console.error("Realtime sync listener error:", err);
-          updateSyncBadge(false);
-          renderApp();
-        });
+        setupFirestoreListener();
 
       } catch (err) {
-        console.error("Cloud init error:", err);
+        console.warn("Cloud sync init fallback:", err);
+        updateSyncBadge(false);
         renderApp();
       }
+    }
+
+    function setupFirestoreListener() {
+      if (!db || !currentUser) return;
+      if (unsubscribeSync) unsubscribeSync();
+
+      const activeRoom = localStorage.getItem('aldis_cloud_room_id') || appId;
+      document.getElementById('syncRoomLabel').innerText = `Room: ${activeRoom}`;
+
+      // Rule 1 Path: /artifacts/{appId}/public/data/mtd_data/global_state
+      const docRef = doc(db, 'artifacts', activeRoom, 'public', 'data', 'mtd_data', 'global_state');
+
+      unsubscribeSync = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data && data.store) {
+            window.appData = data;
+            localStorage.setItem('aldis_mtd_app_v2', JSON.stringify(window.appData));
+            renderApp();
+            updateSyncBadge(true);
+          }
+        } else {
+          saveAppDataToCloud();
+        }
+      }, (err) => {
+        console.warn("Realtime sync listener notice:", err);
+        updateSyncBadge(false);
+        renderApp();
+      });
     }
 
     function updateSyncBadge(isLive) {
@@ -624,11 +680,10 @@
       } else {
         dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
         text.className = 'text-[10px] tracking-wider uppercase font-extrabold text-amber-300';
-        text.innerText = 'Local Storage Mode';
+        text.innerText = 'Local Offline Mode';
       }
     }
 
-    // Save app data locally and sync with Firestore cloud in real-time
     window.saveAppData = async function() {
       localStorage.setItem('aldis_mtd_app_v2', JSON.stringify(window.appData));
       renderApp();
@@ -638,11 +693,12 @@
     async function saveAppDataToCloud() {
       if (db && currentUser) {
         try {
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'mtd_data', 'global_state');
+          const activeRoom = localStorage.getItem('aldis_cloud_room_id') || appId;
+          const docRef = doc(db, 'artifacts', activeRoom, 'public', 'data', 'mtd_data', 'global_state');
           await setDoc(docRef, window.appData);
           updateSyncBadge(true);
         } catch (e) {
-          console.error("Cloud save failed:", e);
+          console.warn("Cloud save notice:", e);
         }
       }
     }
@@ -818,7 +874,7 @@
       const newVal = parseRp(input.value);
       getCurrentSheet().days[dayKey][field] = newVal;
       window.saveAppData();
-      showToast(`Data Tgl ${dayKey} diperbarui & tersinkronisasi`, '💾');
+      showToast(`Data Tgl ${dayKey} diperbarui & tersinkron`, '💾');
     }
 
     function renderChart(days, targetDaily) {
@@ -1129,6 +1185,21 @@
       window.saveAppData();
       closeModal('editTargetModal');
       showToast('Target Sales berhasil diperbarui!', '🎯');
+    }
+
+    window.openSyncSettingsModal = function() {
+      const currentRoom = localStorage.getItem('aldis_cloud_room_id') || 'aldis-hotdog-global-v1';
+      document.getElementById('syncRoomInput').value = currentRoom;
+      document.getElementById('syncSettingsModal').classList.remove('hidden');
+    }
+
+    window.saveSyncRoomKey = function() {
+      const roomVal = document.getElementById('syncRoomInput').value.trim();
+      if (!roomVal) return;
+      localStorage.setItem('aldis_cloud_room_id', roomVal);
+      closeModal('syncSettingsModal');
+      showToast(`Menghubungkan ke Room: ${roomVal}...`, '🔄');
+      setupFirestoreListener();
     }
 
     window.exportCSV = function() {
