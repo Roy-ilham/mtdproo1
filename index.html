@@ -7,15 +7,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#881337">
-  <title>MTD Sales Tracker - Aldis Hotdog</title>
+  <title>MTD Sales Tracker - Aldis Hotdog (Real-Time APK Sync)</title>
   
   <!-- Embedded Web App Manifest for AppsGeyser & Android PWA -->
   <link rel="manifest" href='data:application/manifest+json,{"name":"Aldis Hotdog MTD","short_name":"Aldis MTD","start_url":".","display":"standalone","background_color":"#020617","theme_color":"#881337","orientation":"portrait"}'>
 
+  <!-- Tailwind CSS & Chart.js CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- MQTT.js CDN for Universal Multi-Device Cloud Real-Time Sync in APKs -->
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.5/dist/mqtt.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
   <script>
     tailwind.config = {
@@ -406,8 +408,8 @@
       </div>
       <div class="space-y-3">
         <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs space-y-1">
-          <p class="font-extrabold">✅ Status Cloud Terhubung</p>
-          <p class="text-[11px] leading-relaxed text-emerald-700">Setiap perubahan data di HP ini otomatis muncul di HP tim lain.</p>
+          <p class="font-extrabold">✅ Status Cloud Terhubung Global</p>
+          <p class="text-[11px] leading-relaxed text-emerald-700">Setiap perubahan data di HP ini otomatis muncul di HP tim lain yang membuka aplikasi ini.</p>
         </div>
         <button onclick="copyShareLink()" class="w-full btn-action bg-slate-900 text-white text-xs font-extrabold py-2.5 px-3 rounded-xl flex items-center justify-center gap-2">
           Salin Link Aplikasi Untuk Tim
@@ -424,21 +426,13 @@
     <span id="toastMessage">Notifikasi</span>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+  <script>
     const DAYS_ID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
     const MONTHS_ID = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
 
     let salesChartInstance = null;
-    let db = null;
-    let auth = null;
-    let currentUser = null;
-    let unsubscribeSync = null;
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'aldis-hotdog-mtd-default';
+    let mqttClient = null;
+    const SYNC_TOPIC = 'aldis_hotdog_mtd_store/v3_global_channel';
 
     window.appData = JSON.parse(localStorage.getItem('aldis_mtd_app_v2')) || {
       outlets: [
@@ -492,91 +486,73 @@
       return result;
     }
 
-    async function initCloudSync() {
-      let firebaseConfig = null;
-      if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
-      }
-      if (!firebaseConfig) {
-        firebaseConfig = {
-          apiKey: "AIzaSyAs-demo-key-aldis-hotdog-mtd",
-          authDomain: "aldis-hotdog-mtd.firebaseapp.com",
-          projectId: "aldis-hotdog-mtd",
-          storageBucket: "aldis-hotdog-mtd.appspot.com",
-          messagingSenderId: "1029384756",
-          appId: "1:1029384756:web:aldis123456"
-        };
-      }
-
+    function initCloudSync() {
+      updateSyncBadge(false, 'Menghubungkan Server Cloud...');
       try {
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
+        const clientId = 'aldis_apk_' + Math.random().toString(16).substr(2, 8);
+        
+        // Universal MQTT Broker for Web & Mobile APKs
+        mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+          clientId: clientId,
+          clean: true,
+          reconnectPeriod: 3000,
+          connectTimeout: 10000
+        });
 
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          const cred = await signInWithCustomToken(auth, __initial_auth_token);
-          currentUser = cred.user;
-        } else {
-          const cred = await signInAnonymously(auth);
-          currentUser = cred.user;
-        }
+        mqttClient.on('connect', () => {
+          updateSyncBadge(true, 'Real-Time Cloud Connected');
+          mqttClient.subscribe(SYNC_TOPIC, { qos: 1 });
+        });
 
-        setupFirestoreListener();
+        mqttClient.on('message', (topic, message) => {
+          if (topic === SYNC_TOPIC && message) {
+            try {
+              const cloudData = JSON.parse(message.toString());
+              if (cloudData && cloudData.store) {
+                window.appData = cloudData;
+                localStorage.setItem('aldis_mtd_app_v2', JSON.stringify(window.appData));
+                renderApp();
+                updateSyncBadge(true, 'Real-Time Cloud Connected');
+              }
+            } catch(e) {}
+          }
+        });
+
+        mqttClient.on('error', () => {
+          updateSyncBadge(false, 'Mode Lokal / Server Timeout');
+        });
+
+        mqttClient.on('offline', () => {
+          updateSyncBadge(false, 'Mode Lokal / Offline');
+        });
       } catch (err) {
-        updateSyncBadge(false);
-        renderApp();
+        updateSyncBadge(false, 'Mode Lokal / Offline');
       }
     }
 
-    function setupFirestoreListener() {
-      if (!db || !currentUser) { renderApp(); return; }
-      if (unsubscribeSync) unsubscribeSync();
-
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'mtd_data', 'global_state');
-      unsubscribeSync = onSnapshot(docRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const cloudData = docSnap.data();
-          if (cloudData && cloudData.store) {
-            window.appData = cloudData;
-            localStorage.setItem('aldis_mtd_app_v2', JSON.stringify(window.appData));
-            renderApp();
-            updateSyncBadge(true);
-          }
-        } else {
-          saveAppDataToCloud();
-        }
-      }, () => {
-        updateSyncBadge(false);
-        renderApp();
-      });
-    }
-
-    function updateSyncBadge(isLive) {
+    function updateSyncBadge(isLive, customMsg) {
       const dot = document.getElementById('syncStatusDot');
       const text = document.getElementById('syncStatusText');
       if (isLive) {
         dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
         text.className = 'text-[10px] tracking-wider uppercase font-extrabold text-emerald-300';
-        text.innerText = 'Real-Time Cloud Connected';
+        text.innerText = customMsg || 'Real-Time Cloud Connected';
       } else {
         dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
         text.className = 'text-[10px] tracking-wider uppercase font-extrabold text-amber-300';
-        text.innerText = 'Mode Lokal / Offline';
+        text.innerText = customMsg || 'Mode Lokal / Offline';
       }
     }
 
-    window.saveAppData = async function() {
+    window.saveAppData = function() {
       localStorage.setItem('aldis_mtd_app_v2', JSON.stringify(window.appData));
       renderApp();
-      await saveAppDataToCloud();
-    }
-
-    async function saveAppDataToCloud() {
-      if (db && currentUser) {
+      
+      if (mqttClient && mqttClient.connected) {
         try {
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'mtd_data', 'global_state');
-          await setDoc(docRef, window.appData);
-          updateSyncBadge(true);
+          mqttClient.publish(SYNC_TOPIC, JSON.stringify(window.appData), { retain: true, qos: 1 }, (err) => {
+            if (!err) updateSyncBadge(true, 'Real-Time Cloud Connected');
+          });
         } catch (e) {}
       }
     }
@@ -1051,6 +1027,7 @@
 
     window.onload = function() {
       initCloudSync();
+      renderApp();
     };
   </script>
 </body>
